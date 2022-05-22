@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.List;
 
 import it.unical.mat.embasp.base.Callback;
@@ -75,15 +76,15 @@ public abstract class DesktopService implements Service {
 	@Override
 	public Output startSync(final List<InputProgram> programs, final List<OptionDescriptor> options) {
 
-		String option = new String();
-		for (final OptionDescriptor o : options)
+		List<String> exe_options = new ArrayList<>();
+		for (final OptionDescriptor o : options) {
 			if (o != null) {
-				option += o.getOptions();
-				option += o.getSeparator();
+				exe_options.add(o.getOption());
 			} else
 				System.err.println("Warning : wrong " + OptionDescriptor.class.getName());
+		}
 
-		String files_paths = new String();
+		List<String> files_paths = new ArrayList<>();
 		String final_program = new String();
 
 		for (final InputProgram p : programs)
@@ -92,8 +93,7 @@ public abstract class DesktopService implements Service {
 				for(final String program_file: p.getFilesPaths()){
 					File f = new File(program_file);
 					if(f.exists() && !f.isDirectory()) { 
-						files_paths += program_file;
-						files_paths += " ";
+						files_paths.add(program_file);
 					}
 					else
 						System.err.println("Warning : the file " + f.getAbsolutePath() + " does not exists.");
@@ -110,17 +110,19 @@ public abstract class DesktopService implements Service {
 			
 			if (exe_path == null)
 				return new Output("", "Error: executable not found");
-			
-			final StringBuffer stringBuffer = new StringBuffer();
-			stringBuffer.append(exe_path).append(" ").append(option).append(" ").append(files_paths);
-			
+
+			List<String> command = new ArrayList<>();
+			command.add(exe_path);
+			command.addAll(exe_options);
+			command.addAll(files_paths);
+
 			if (!final_program.isEmpty()){
-				stringBuffer.append(this.load_from_STDIN_option);
+				command.add(this.load_from_STDIN_option);
 			}
 
-			System.err.println(stringBuffer.toString());
-			
-			final Process solver_process = Runtime.getRuntime().exec(stringBuffer.toString());
+			System.err.println(command);
+
+			final Process solver_process = new ProcessBuilder(command).start();
 			
 			Thread threadOutput=new Thread() {
 				@Override
